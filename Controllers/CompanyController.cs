@@ -9,21 +9,21 @@ namespace Gestion_des_entreprises_dans_la_registre_de_commerce_de_Suisse
 
     [ApiController]
     [Route("")]
-    public class LegalFormController : ControllerBase
+    public class CompanyController : ControllerBase
     {
         private readonly IHttpClientFactory _clientFactory;
         private readonly ApiSettings _apiSettings;
         private readonly ApiCredentials _apiCredentials;
 
-        public LegalFormController(IHttpClientFactory clientFactory, IOptions<ApiSettings> apiSettings, IOptions<ApiCredentials> apiCredentials)
+        public CompanyController(IHttpClientFactory clientFactory, IOptions<ApiSettings> apiSettings, IOptions<ApiCredentials> apiCredentials)
         {
             _clientFactory = clientFactory;
             _apiSettings = apiSettings.Value;
             _apiCredentials = apiCredentials.Value;
         }
 
-        [HttpGet("api/v1/legalForm")]
-        public async Task<IEnumerable<LegalForm>> Get()
+        [HttpGet("api/v1/sogc/bydate/2020-01-10")]
+        public async Task<IEnumerable<string>> Get()
         {
             var client = _clientFactory.CreateClient();
 
@@ -34,17 +34,20 @@ namespace Gestion_des_entreprises_dans_la_registre_de_commerce_de_Suisse
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Authentication);
 
             // Construire l'URL complète en concaténant la base URL et le chemin de l'endpoint
-            var apiUrl = $"{_apiSettings.BaseUrl}{"api/v1/legalForm"}";
+            var apiUrl = $"{_apiSettings.BaseUrl}{"api/v1/sogc/bydate/2020-01-10"}";
 
             // Faire la requête à l'API avec les informations d'authentification
-            var response = await client.GetFromJsonAsync<IEnumerable<LegalForm>>(apiUrl);
+            var sogcList = await client.GetFromJsonAsync<IEnumerable<ListSogc>>(apiUrl);
 
-            if (response == null)
+            if (sogcList == null)
             {
-                return new List<LegalForm>(); // Liste vide en cas d'erreur
+                return new List<string>(); // Liste vide en cas d'erreur
             }
 
-            return response;
+            // Retrieve only the "uid" values from the sogcList
+            var uids = sogcList.Select(sogc => sogc.CompanyShort?.Uid);
+
+            return uids.Where(uid => !string.IsNullOrEmpty(uid)).Take(10).ToList();
         }
     }
 }
